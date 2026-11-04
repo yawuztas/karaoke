@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Karaoke Yap
+GenericName=Karaoke Maker
+Comment=Spotify sarkisindan altyazili karaoke videosu uretir
+Exec=/home/yavuz/.local/bin/karaoke-launcher
+Icon=audio-x-generic
+Terminal=false
+Categories=AudioVideo;Audio;Music;
+Keywords=karaoke;spotify;demucs;whisperx;
+StartupNotify=true
