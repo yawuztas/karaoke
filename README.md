@@ -1,83 +1,77 @@
-# 🎤 Karaoke
+# 🎤 Karaoke Pipeline — Song In, Karaoke Video Out
 
-Kızım için yazdığım tek dosyalık karaoke hazırlayıcı: şarkı adını söyle, gerisini halleder.
+A single-file Python pipeline that turns any song into a word-by-word karaoke
+video: downloads the track, separates vocals, fetches/aligns lyrics with
+word-level timing, and renders a 720p video with live waveform, Ken Burns
+cover zoom and synchronized karaoke subtitles.
 
-Şarkıyı indirir → vokali enstrümantalden ayırır → sözleri getirir → kelime kelime senkronlu karaoke videosu üretir.
+Built as a gift for my daughter — say the song name, everything else is
+automatic.
 
-## Akış
+> **Türkçe özet için aşağı kaydırın** — ayrıntılı Türkçe dokümantasyon:
+> [README_TR.md](README_TR.md)
 
-```
-şarkı adı → spotdl (indirme) → Demucs (vokal/enstrüman ayrımı)
-          → söz kaldıracı (aşağıda) → ASS {\k} karaoke altyazı
-          → FFmpeg (720p video: dalga formu + Ken Burns kapak + ton kaydırma)
-```
+## ✨ Features
 
-### Söz kaldıracı (öncelik sırasıyla)
+- **Word-by-word karaoke highlight** — sung words turn white, upcoming words
+  stay amber (ASS `{\k}` subtitles)
+- **Smart lyrics pipeline** (priority order):
+  1. **LDDC** — true word-level timing from QQ/Kugou/NetEase
+  2. **LRCLIB** — synced lyrics (drops to line-level if needed)
+  3. **Force-align** — known plain-text lyrics aligned to vocals with WhisperX
+  4. **WhisperX** — large-v3 transcription + alignment as last resort
+- **Never fakes timing** — if the lyric *text* is known, it is force-aligned to
+  the vocals; noticeably more accurate than raw Whisper for Turkish repertoire
+- **Live waveform + Ken Burns cover zoom** in the rendered video
+- **`--transpose`** — pitch shift without changing duration (subtitles survive)
+- **One-click GUI** (`launch.sh`, zenity) — queue multiple songs back-to-back
+- **Stem reuse** — change subtitles and re-render in ~30 seconds
 
-1. **LDDC** — QQ/Kugou/NetEase'ten gerçek kelime-düzeyi (harf harf) zamanlama
-2. **LRCLIB** — senkronlu sözler (satır düzeyi ise 3'e düşer)
-3. **Force-align** — bilinen düz metin sözler, vokallere WhisperX ile hizalanır
-4. **WhisperX** — söz bulunamazsa large-v3 ile transkripsiyon + hizalama
+## 🚀 Getting Started
 
-Kritik nokta: sözün *metni* biliniyorsa asla sahte zamanlama kullanılmaz — metin vokallere force-align edilir. Türkçe repertuvar için bu, saf Whisper transkripsiyonundan belirgin şekilde daha doğru.
-
-## Özellikler
-
-- Kelime kelime karaoke vurgusu (söylenen beyaz, gelecek sarı)
-- Canlı dalga formu + kapak resminde yavaş zoom (Ken Burns)
-- `--transpose` ile perde kaydırma (süre sabit kalır, altyazı bozulmaz)
-- Çift tıkla çalışan GUI (`launch.sh`, zenity) — art arda çok şarkı
-- Mevcut stem'ler yeniden kullanılır: altyazıyı değiştirip 30 saniyede yeniden render
-
-## Kurulum
-
-Gereksinimler: Python 3.12, ffmpeg, (isteğe bağlı) NVIDIA GPU + CUDA
+Requirements: Python 3.12, ffmpeg, (optional) NVIDIA GPU + CUDA
 
 ```bash
 python3 -m venv venv
-./venv/bin/pip install -r requirements.txt
+./venv/bin/pip install -r requirements.txt   # first WhisperX/Demucs run downloads ~3 GB
+./launch.sh                                   # GUI
 ```
-
-İlk WhisperX/Demucs çalıştırması modelleri indirir (~3 GB, `~/.cache`).
-
-## Kullanım
-
-GUI (çift tık veya terminal):
 
 ```bash
-./launch.sh
+# CLI examples
+./venv/bin/python karaoke.py                          # process everything in input/
+./venv/bin/python karaoke.py "input/song.mp3" --transpose -2   # one tone down
+./venv/bin/python karaoke.py "input/song.mp3" --srt-only       # subtitles only
 ```
 
-CLI:
+Output: `output/<song>/<song>_karaoke.mp4`
 
-```bash
-# input/ klasörüne şarkı koy, hepsini işle
-./venv/bin/python karaoke.py
+## 🛠 Built On
 
-# tek şarkı, 1 tam ses aşağı
-./venv/bin/python karaoke.py "input/Tarkan - Şımarık.mp3" --transpose -2
+[Demucs](https://github.com/facebookresearch/demucs) (vocal separation) ·
+[WhisperX](https://github.com/m-bain/whisperX) (alignment/ASR) ·
+[LDDC](https://github.com/chenmozhijin/LDDC) (word-level lyrics) ·
+[LRCLIB](https://lrclib.net) · [spotdl](https://github.com/spotDL/spotify-downloader)
+· Turkish alignment model: `wav2vec2-xls-r-300m-cv7-turkish`
 
-# altyazıyı yeniden üret (video render yok)
-./venv/bin/python karaoke.py "input/şarkı.mp3" --srt-only
+## 📄 License & Notes
 
-# çevrimiçi söz kaynaklarını atla, doğrudan transkripsiyon
-./venv/bin/python karaoke.py "input/şarkı.mp3" --no-lrclib
-```
+Downloaded music is copyrighted — **personal use only**. Personal/educational
+project; see repository settings.
 
-Çıktı: `output/<Şarkı>/<Şarkı>_karaoke.mp4`
+---
 
-## Klasör yapısı
+## 🇹🇷 Türkçe Özet
 
-```
-input/      işlenecek şarkılar (repoya girmez)
-output/     bitmiş videolar + stem'ler (repoya girmez)
-models/     nltk verisi + son çalışma logu (repoya girmez)
-launch.sh   zenity GUI başlatıcı
-karaoke.py  tüm pipeline (tek dosya)
-```
+Kızım için yazdığım tek dosyalık karaoke hazırlayıcısı: şarkı adını söyle,
+gerisini halleder. Şarkıyı indirir → vokali enstrümandan ayırır (Demucs) →
+sözleri getirir (LDDC / LRCLIB / force-align / WhisperX) → kelime kelime
+senkronlu karaoke videosu üretir (FFmpeg: dalga formu + Ken Burns kapak).
 
-## Notlar
+- Söz *metni* biliniyorsa asla sahte zamanlama kullanılmaz — vokallere
+  force-align edilir; Türkçe repertuvarda saf Whisper'dan belirgin şekilde doğru
+- `--transpose` ile perde kaydırma (süre sabit), `--srt-only` ile sadece altyazı
+- Mevcut stem'ler yeniden kullanılır: altyazıyı değiştirip 30 saniyede yeniden render
+- Kişisel kullanım içindir; indirilen müzik teliflidir
 
-- `spotdl` YouTube/Spotify'dan indirir; indirilen müzik teliflidir, **kişisel kullanım** içindir.
-- Türkçe hizalama modeli: `wav2vec2-xls-r-300m-cv7-turkish`; İngilizce ve 90+ dil otomatik desteklenir.
-- Bu repo kişisel/öğretici amaçlıdır; temelde [Demucs](https://github.com/facebookresearch/demucs), [WhisperX](https://github.com/m-bain/whisperX), [LDDC](https://github.com/chenmozhijin/LDDC), [LRCLIB](https://lrclib.net) ve [spotdl](https://github.com/spotDL/spotify-downloader) kullanır.
+Ayrıntılı akış, kurulum ve kullanım: [README_TR.md](README_TR.md)
